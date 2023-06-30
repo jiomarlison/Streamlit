@@ -1,62 +1,47 @@
 import streamlit as st
 import pandas as pd
-
+# streamlit run '.\Lista de alunos.py'
 st.set_page_config(page_title='DADOS ALUNOS', page_icon='🧑‍🎓', layout='wide')
 st.title('**:red[VISUALIZAÇÃO DOS DADOS DAS TURMAS]**')
 
-col1, col2, col3, col4 = st.tabs(['ENSINO FUNDAMENTAL', 'NOVO ENSINO MEDIO', 'ENSINO MEDIO', 'INFORMAÇÕES DE TODAS AS TURMAS'])
+fundamental, informacoes_turmas, todos_fundamental = st.tabs(['ENSINO FUNDAMENTAL', 'INFORMAÇÕES TURMAS', 'TODOS ALUNOS FUNDAMENTAL'])
 
-with col1:
+with fundamental:
+    def lista_fundamental():
+        alunos_fundamental = []
+        for x in turmas:
+            df = pd.DataFrame(pd.read_excel(fundamental, header=5, sheet_name=x))
+            df = df.drop(columns=['Procedência modalidade/curso'])
+            df['Turma'] = f'{x[-4]} ANO - {x[-1]}'
+            alunos_fundamental.append(df)
+        dataframe_fundamental = pd.concat(alunos_fundamental).dropna()
+        return dataframe_fundamental
     st.markdown('**:red[FAÇA O UPLOAD DA TABELA COM AS TURMAS DO FUNDAMENTAL]**')
     fundamental = st.file_uploader(label='', type=['xls', 'xlsx'], label_visibility='hidden', key='fundamental')
+
     if fundamental:
-        df = pd.DataFrame(pd.read_excel(fundamental, header=5))
-        colunas_turma = df.keys()
         turmas = pd.read_excel(fundamental, None).keys()
-        turmas_fundamental = []
-        for x in turmas:
-            turmas_fundamental.append(x)
-        turma_selecionada = st.selectbox('SELECIONE A TURMA PARA VER OS DADOS', options=turmas_fundamental)
-        tabela = pd.read_excel(fundamental, header=5, sheet_name=None)
-        st.dataframe(tabela[turma_selecionada].sort_values(by=['Nome']))
-
-with col2:
-    st.markdown('**:red[FAÇA O UPLOAD DA TABELA COM AS TURMAS DO NOVO ENSINO MÉDIO]**')
-    novo_medio = st.file_uploader(label=' ', type=['xls', 'xlsx'], key='novo medio', label_visibility='hidden')
-    if novo_medio:
-        df = pd.DataFrame(pd.read_excel(novo_medio, header=5))
+        turma_selecionada = st.radio('**:red[SELECIONE A TURMA PARA VER OS DADOS]**', options=turmas, horizontal=True, key=1)
+        df = pd.DataFrame(pd.read_excel(fundamental, header=5, sheet_name=turma_selecionada))
+        df = df.drop(columns=['Procedência modalidade/curso'])
         colunas_turma = df.keys()
-        turmas = pd.read_excel(novo_medio, None).keys()
-        turmas_novo_medio = []
-        for x in turmas:
-            turmas_novo_medio.append(x)
-        turma_selecionada = st.selectbox('SELECIONE A TURMA PARA VER OS DADOS', options=turmas_novo_medio)
-        tabela = pd.read_excel(novo_medio, header=5, sheet_name=None)
-        st.dataframe(tabela[turma_selecionada].sort_values(by=['Nome']))
+        filtro = st.radio('**:red[FILTRAR POR]**', options=colunas_turma, horizontal=True, key=2)
+        df = df.sort_values(by=[filtro])
+        st.dataframe(data=df, width=1500)
 
-with col3:
-    st.markdown('**:red[FAÇA O UPLOAD DA TABELA COM AS TURMAS DO ENSINO MÉDIO]**')
-    medio = st.file_uploader(label='', type=['xls', 'xlsx'], key='medio', label_visibility='hidden')
-    if medio:
-        df = pd.DataFrame(pd.read_excel(medio, header=5))
-        colunas_turma = df.keys()
-        turmas = pd.read_excel(medio, None).keys()
-        turmas_medio = []
-        for x in turmas:
-            turmas_medio.append(x)
-        turma_selecionada = st.selectbox('SELECIONE A TURMA PARA VER OS DADOS', options=turmas_medio)
-        tabela = pd.read_excel(medio, header=5, sheet_name=None)
-        st.dataframe(tabela[turma_selecionada].sort_values(by=['Nome']))
-
-with col4:
+with informacoes_turmas:
     todas_turmas = []
     if fundamental:
-        todas_turmas.extend(turmas_fundamental)
-
-    if novo_medio:
-        todas_turmas.extend(turmas_novo_medio)
-
-    if medio:
-        todas_turmas.extend(turmas_medio)
-
+        todas_turmas.extend(turmas)
     st.write(todas_turmas)
+
+with todos_fundamental:
+    filtro_todos = st.radio('**:red[FILTRAR POR]**', options=lista_fundamental().keys(), horizontal=True)
+    st.header('**TODOS OS ALUNOS DO FUNDAMENTAL**')
+    st.dataframe(data=lista_fundamental().sort_values(by=[filtro_todos]), width=1500)
+
+    @st.cache_data
+    def planilha(df):
+        return df.to_csv(index=False).encode('utf-8')
+    planilha_alunos = planilha(lista_fundamental())
+    st.download_button(label="Baixar Lista", data=planilha_alunos, file_name='Lista Fundamental.csv')
